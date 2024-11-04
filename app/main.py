@@ -1,43 +1,51 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, SecretStr
 from typing import List
-import openai
-from nltk.tokenize import sent_tokenize
 import os
-import nltk
 import logging
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import File, UploadFile
 import PyPDF2
 import io
 from dotenv import load_dotenv
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from app.note_taker import OpenAINoteTaker
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Download required NLTK data
-nltk.download('punkt')
-
 # Load environment variables at startup
 load_dotenv()
 
-# Get default API key from environment
+# Get default API key from environment and initialize note_taker
 DEFAULT_API_KEY = os.getenv('OPENAI_API_KEY')
+if DEFAULT_API_KEY:
+    note_taker = OpenAINoteTaker(DEFAULT_API_KEY)
+else:
+    raise Exception("OPENAI_API_KEY environment variable is required")
 
 app = FastAPI()
 
 # Add CORS support
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["kard.space"],
+    allow_origins=["kard.space", "http://localhost:8000", "http://127.0.0.1:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Add static files middleware
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
+# Add route to serve index.html
+@app.get("/ui")
+async def serve_ui():
+    return FileResponse("app/static/index.html")
+
 class BookContent(BaseModel):
-    title: str
     content: str
     chapter: str = None
 
@@ -48,8 +56,6 @@ class Note(BaseModel):
 
 class Config(BaseModel):
     openai_api_key: SecretStr
-
-note_taker = None
 
 @app.post("/configure")
 async def configure(config: Config = None):
