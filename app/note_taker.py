@@ -83,6 +83,11 @@ class OpenAINoteTaker:
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": """You are a literary analyst that identifies and analyzes important quotes.
+                    Use markdown-style formatting in your analysis:
+                    - Use **bold** for emphasis on key terms or concepts
+                    - Use *italics* for literary devices or thematic elements
+                    - Use ++underline++ for character names or important places
+                    
                     For each quote:
                     1. Provide the exact quote from the text
                     2. Explain the specific context in which it appears

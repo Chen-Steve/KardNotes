@@ -80,16 +80,31 @@
             // Update formatted results
             if (data.key_points) {
                 document.getElementById('key-points').innerHTML = 
-                    data.key_points.map(point => `<li>${point}</li>`).join('');
-                document.getElementById('summary').textContent = data.summary;
+                    data.key_points.map(point => `<li>${formatText(point)}</li>`).join('');
+                document.getElementById('summary').innerHTML = formatText(data.summary);
                 document.getElementById('quotes').innerHTML = 
                     data.important_quotes.map(quoteObj => `
                         <div class="border-l-4 border-gray-300 pl-4">
-                            <blockquote class="text-lg italic mb-2">"${quoteObj.quote}"</blockquote>
-                            <p class="text-gray-700">${quoteObj.analysis}</p>
+                            <blockquote class="text-lg italic mb-2">"${formatText(quoteObj.quote)}"</blockquote>
+                            <p class="text-gray-700">${formatText(quoteObj.analysis)}</p>
                         </div>
                     `).join('');
             }
+        }
+
+        function formatText(text) {
+            if (!text) return '';
+            
+            // Replace markdown-style formatting with HTML
+            return text
+                // Bold: **text** or __text__
+                .replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>')
+                // Italic: *text* or _text_
+                .replace(/(\*|_)(.*?)\1/g, '<em>$2</em>')
+                // Underline: ++text++
+                .replace(/\+\+(.*?)\+\+/g, '<u>$1</u>')
+                // Convert line breaks to <br>
+                .replace(/\n/g, '<br>');
         }
 
         function toggleResultsFormat() {
