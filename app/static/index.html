@@ -6,41 +6,57 @@
     <title>KardNote Tester</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-4xl mx-auto">
-        <h1 class="text-3xl font-bold mb-8">KardNote API Tester</h1>
+<body class="bg-gray-100">
+    <div class="h-screen flex flex-col">
+        <div class="flex-1 grid grid-cols-2">
+            <!-- Left Column: Input -->
+            <div class="flex flex-col">
+                <div class="bg-white p-4 shadow-md flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">Input Text</h2>
+                    <button onclick="generateNotes()" 
+                            class="text-black px-2 py-1 rounded border border-black">
+                        Generate
+                    </button>
+                </div>
+                <div class="flex-1 flex flex-col p-4 bg-white">
+                    <textarea id="content" 
+                          placeholder="Enter book content here..." 
+                          class="flex-1 p-2 border rounded"></textarea>
+                </div>
+            </div>
 
-        <!-- Text Input Section -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-xl font-semibold mb-4">Generate Notes from Text</h2>
-            <textarea id="content" placeholder="Enter book content here..." 
-                      class="w-full p-2 border rounded mb-4 h-32"></textarea>
-            <button onclick="generateNotes()" 
-                    class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                Generate Notes
-            </button>
-        </div>
-
-        <!-- PDF Upload Section -->
-        <div class="bg-white p-6 rounded-lg shadow-md mb-8">
-            <h2 class="text-xl font-semibold mb-4">Generate Notes from PDF</h2>
-            <input aria-label="Upload PDF" type="file" id="pdfFile" accept=".pdf" 
-                   class="w-full p-2 border rounded mb-4">
-            <button onclick="processPdf()" 
-                    class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
-                Process PDF
-            </button>
-        </div>
-
-        <!-- Results Section -->
-        <div class="bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold mb-4">Results</h2>
-            <pre id="results" class="whitespace-pre-wrap bg-gray-100 p-4 rounded"></pre>
+            <!-- Right Column: Results -->
+            <div class="flex flex-col">
+                <div class="bg-white p-4 shadow-md flex justify-between items-center">
+                    <h2 class="text-xl font-semibold">Results</h2>
+                    <button onclick="toggleResultsFormat()" 
+                            class="text-black px-2 py-1 rounded border border-black">
+                        Toggle Format
+                    </button>
+                </div>
+                <div id="formatted-results" class="flex-1 p-4 bg-white overflow-y-auto hidden">
+                    <div class="mb-4">
+                        <h3 class="font-semibold mb-2">Key Points:</h3>
+                        <ul id="key-points" class="list-disc pl-5"></ul>
+                    </div>
+                    <div class="mb-4">
+                        <h3 class="font-semibold mb-2">Summary:</h3>
+                        <p id="summary"></p>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold mb-2">Important Quotes:</h3>
+                        <div id="quotes" class="space-y-4"></div>
+                    </div>
+                </div>
+                <pre id="raw-results" 
+                     class="flex-1 whitespace-pre-wrap bg-gray-100 p-4 overflow-y-auto"></pre>
+            </div>
         </div>
     </div>
 
     <script>
         const API_BASE = window.location.origin;
+        let currentResults = null;
 
         async function generateNotes() {
             const content = document.getElementById('content').value;
@@ -50,38 +66,43 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ content })
                 });
-                const data = await response.json();
-                showResults(JSON.stringify(data, null, 2));
+                currentResults = await response.json();
+                showResults(currentResults);
             } catch (error) {
-                showResults('Error: ' + error.message);
+                showResults({ error: error.message });
             }
         }
 
-        async function processPdf() {
-            const fileInput = document.getElementById('pdfFile');
-            const file = fileInput.files[0];
-            if (!file) {
-                showResults('Please select a PDF file');
-                return;
-            }
-
-            const formData = new FormData();
-            formData.append('file', file);
-
-            try {
-                const response = await fetch(`${API_BASE}/process-pdf`, {
-                    method: 'POST',
-                    body: formData
-                });
-                const data = await response.json();
-                showResults(JSON.stringify(data, null, 2));
-            } catch (error) {
-                showResults('Error: ' + error.message);
+        function showResults(data) {
+            // Show raw results
+            document.getElementById('raw-results').textContent = JSON.stringify(data, null, 2);
+            
+            // Update formatted results
+            if (data.key_points) {
+                document.getElementById('key-points').innerHTML = 
+                    data.key_points.map(point => `<li>${point}</li>`).join('');
+                document.getElementById('summary').textContent = data.summary;
+                document.getElementById('quotes').innerHTML = 
+                    data.important_quotes.map(quoteObj => `
+                        <div class="border-l-4 border-gray-300 pl-4">
+                            <blockquote class="text-lg italic mb-2">"${quoteObj.quote}"</blockquote>
+                            <p class="text-gray-700">${quoteObj.analysis}</p>
+                        </div>
+                    `).join('');
             }
         }
 
-        function showResults(text) {
-            document.getElementById('results').textContent = text;
+        function toggleResultsFormat() {
+            const rawResults = document.getElementById('raw-results');
+            const formattedResults = document.getElementById('formatted-results');
+            
+            if (rawResults.classList.contains('hidden')) {
+                rawResults.classList.remove('hidden');
+                formattedResults.classList.add('hidden');
+            } else {
+                rawResults.classList.add('hidden');
+                formattedResults.classList.remove('hidden');
+            }
         }
     </script>
 </body>

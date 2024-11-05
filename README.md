@@ -13,3 +13,10 @@ A lightweight microservice that generates human-like notes from book content usi
 - `POST /generate-notes` - Generate notes from book content
 - `GET /health` - Service health check
 - `GET /` - API information
+
+clone
+pip install -r requirements.txt
+uvicorn app.main:app --reload
+
+api is on  http://127.0.0.1:8000 
+web interface is on  http://127.0.0.1:8000/ui

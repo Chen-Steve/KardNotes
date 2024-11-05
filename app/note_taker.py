@@ -77,20 +77,44 @@ class OpenAINoteTaker:
         
         return " ".join(summaries)
 
-    def extract_quotes(self, text: str) -> List[str]:
+    def extract_quotes(self, text: str) -> List[dict]:
         try:
             response = self.client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that identifies important quotes."},
-                    {"role": "user", "content": f"Extract 3 important quotes from this text that represent key ideas or concepts: {text}"}
+                    {"role": "system", "content": """You are a literary analyst that identifies and analyzes important quotes.
+                    For each quote:
+                    1. Provide the exact quote from the text
+                    2. Explain the specific context in which it appears
+                    3. Analyze its literal and deeper meaning
+                    4. Explain how it connects to broader themes or character development
+                    5. Discuss its significance to the overall narrative"""},
+                    {"role": "user", "content": f"Extract and analyze 3 important quotes from this text that represent key ideas or concepts: {text}"}
                 ],
                 temperature=0.3,
-                max_tokens=200
+                max_tokens=1000
             )
             quotes_text = response.choices[0].message.content.strip()
-            quotes = re.split(r"\n|[0-9]+\.", quotes_text)
-            return [quote.strip().strip('"\'') for quote in quotes if quote.strip()]
+            
+            # Split the response into individual quote analyses
+            quote_sections = re.split(r'\n(?=\d\.|\"|\"|\')', quotes_text)
+            
+            analyzed_quotes = []
+            for section in quote_sections:
+                if not section.strip():
+                    continue
+                    
+                # Extract the quote and its analysis
+                quote_match = re.search(r'[\"\"\'](.*?)[\"\"\']', section)
+                if quote_match:
+                    quote = quote_match.group(1)
+                    analysis = re.sub(r'[\"\"\'](.*?)[\"\"\']', '', section).strip()
+                    analyzed_quotes.append({
+                        "quote": quote,
+                        "analysis": analysis
+                    })
+            
+            return analyzed_quotes
         except Exception as e:
             print("Error extracting quotes:", e)
             return []

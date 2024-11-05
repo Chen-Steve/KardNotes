@@ -4,9 +4,6 @@ from typing import List
 import os
 import logging
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import File, UploadFile
-import PyPDF2
-import io
 from dotenv import load_dotenv
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -52,7 +49,7 @@ class BookContent(BaseModel):
 class Note(BaseModel):
     key_points: List[str]
     summary: str
-    important_quotes: List[str]
+    important_quotes: List[dict]
 
 class Config(BaseModel):
     openai_api_key: SecretStr
@@ -106,35 +103,3 @@ async def root():
             "generate-notes": "/generate-notes"
         }
     }
-
-# Add new endpoint for PDF processing
-@app.post("/process-pdf", response_model=Note)
-async def process_pdf(file: UploadFile = File(...)):
-    if not file.filename.endswith('.pdf'):
-        raise HTTPException(status_code=400, detail="File must be a PDF")
-    
-    try:
-        # Read PDF content
-        pdf_content = await file.read()
-        pdf_reader = PyPDF2.PdfReader(io.BytesIO(pdf_content))
-        
-        # Extract text from all pages
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-        
-        # Generate notes using existing functionality
-        if not note_taker:
-            raise HTTPException(status_code=400, detail="Service not configured")
-        
-        key_points = note_taker.extract_key_points(text)
-        summary = note_taker.generate_summary(text)
-        quotes = note_taker.extract_quotes(text)
-        
-        return Note(
-            key_points=key_points,
-            summary=summary,
-            important_quotes=quotes
-        )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
